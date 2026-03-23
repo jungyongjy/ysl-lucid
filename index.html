@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YSL LUCID - Perfected Journey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ysl-black': '#000000',
+                        'ysl-surface': '#0A0A0A',
+                        'ysl-card': '#111111',
+                        'ysl-gold': '#D4AF37',
+                        'ysl-ice': '#B0C8D6',
+                        'ysl-text': '#E5E5E5',
+                        'ysl-muted': '#888888',
+                    },
+                    fontFamily: {
+                        'sans': ['"Montserrat"', 'sans-serif'],
+                        'serif': ['"Playfair Display"', 'serif'],
+                    },
+                    letterSpacing: {
+                        'luxury': '0.15em',
+                        'luxury-wide': '0.25em',
+                    },
+                    boxShadow: {
+                        'gold-glow': '0 0 20px rgba(212, 175, 55, 0.15)',
+                        'gold-glow-strong': '0 0 30px rgba(212, 175, 55, 0.25)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .screen-container {
+            display: none;
+            opacity: 0;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        .screen-container.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            transform: translateY(20px) scale(0.95);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.active .modal-card {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .modal-step {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        .modal-step.active {
+            display: block;
+        }
+
+        .bg-lockscreen {
+            background: radial-gradient(circle at 50% 20%, #2a2a2a 0%, #000000 80%);
+        }
+
+        /* Marker positioned exactly over chart coordinate */
+        .chart-marker {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: none;
+            transition: left 0.8s cubic-bezier(0.16, 1, 0.3, 1), top 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+        }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #D4AF37;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            border: 2px solid #fff;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #333;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PROTOTYPE NAVIGATION -->
+    <div class="mb-8 flex flex-wrap justify-center gap-2 md:gap-4 bg-black p-2 rounded-full border border-gray-800 shadow-xl z-50 px-4">
+        <button onclick="navTo('screen-prompt')" id="nav-prompt" class="nav-btn px-4 py-2 rounded-full text-[10px] md:text-xs tracking-widest uppercase font-bold text-ysl-gold bg-ysl-gold/10 transition-colors">1. Prompt</button>
+        <button onclick="navTo('screen-predict')" id="nav-predict" class="nav-btn px-4 py-2 rounded-full text-[10px] md:text-xs tracking-widest uppercase font-bold text-gray-500 hover:text-white transition-colors">2. Predict</button>
+        <button onclick="openModal()" id="nav-preserve" class="nav-btn px-4 py-2 rounded-full text-[10px] md:text-xs tracking-widest uppercase font-bold text-gray-500 hover:text-white transition-colors">3. Preserve</button>
+        <div class="w-px h-6 bg-gray-800 self-center"></div>
+        <button onclick="openShellSwapModal()" id="nav-shell" class="nav-btn px-4 py-2 rounded-full text-[10px] md:text-xs tracking-widest uppercase font-bold text-gray-500 hover:text-white transition-colors border border-gray-700 border-dashed">4. Shell Swap</button>
+    </div>
+
+    <!-- DEVICE FRAME -->
+    <div class="relative w-[390px] h-[844px] bg-ysl-black rounded-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.8)] border-4 border-gray-900 overflow-hidden">
+
+        <!-- ========================================== -->
+        <!-- SCREEN 2: THE PROMPT (LOCK SCREEN) -->
+        <!-- ========================================== -->
+        <div id="screen-prompt" class="screen-container active w-full h-full bg-lockscreen relative flex-col">
+            
+            <div class="flex justify-between items-center px-6 pt-4">
+                <span class="text-[12px] font-medium tracking-wider">13:15</span>
+                <div class="flex gap-1.5 items-center">
+                    <span class="text-[10px]">&#x25CF;&#x25CF;&#x25CF;&#x25CF;</span>
+                    <span class="text-[10px] font-bold">5G</span>
+                    <div class="w-5 h-2.5 border border-white rounded-[2px] p-[1px]"><div class="w-3/4 h-full bg-white"></div></div>
+                </div>
+            </div>
+
+            <div class="text-center mt-12 mb-16">
+                <h2 class="text-[76px] font-light leading-none tracking-tight">13:15</h2>
+                <p class="text-[16px] tracking-widest font-light text-gray-300 mt-2 uppercase">Thursday, February 19</p>
+            </div>
+
+            <!-- YSL NOTIFICATION -->
+            <div class="px-4 cursor-pointer active:scale-95 transition-transform" onclick="navTo('screen-predict')">
+                <div class="bg-[#1A1A1A]/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 shadow-2xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 bg-ysl-gold rounded-md flex items-center justify-center">
+                                <span class="font-serif text-[11px] text-black font-bold tracking-tighter">YSL</span>
+                            </div>
+                            <span class="text-[11px] tracking-luxury text-gray-300 uppercase font-medium">LUCID</span>
+                        </div>
+                        <span class="text-[11px] text-gray-500">now</span>
+                    </div>
+                    <div class="pl-8">
+                        <p class="text-[14px] font-medium leading-snug text-white">
+                            Libre projection at 15%.<br>
+                            <span class="font-light text-gray-300">Optimal time to refresh.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 uppercase tracking-widest animate-pulse">
+                Tap notification to open
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SCREEN 1: THE PREDICT (MAIN DASHBOARD) -->
+        <!-- ========================================== -->
+        <div id="screen-predict" class="screen-container w-full h-full bg-ysl-black flex-col relative">
+            
+            <!-- Top Navigation & Context -->
+            <div class="px-6 pt-12 pb-4 bg-ysl-surface z-30 relative border-b border-white/5 shrink-0">
+                <div class="text-center mb-6">
+                    <span class="font-serif text-[18px] tracking-luxury text-white">YSL <span class="font-sans font-medium text-ysl-ice tracking-luxury-wide drop-shadow-[0_0_8px_rgba(176,200,214,0.3)]">LUCID</span></span>
+                </div>
+                
+                <div class="flex items-center justify-center gap-2 mb-6 bg-white/5 py-2 rounded-full border border-white/5 cursor-pointer hover:bg-white/10 transition-colors" onclick="openModal()">
+                    <div class="w-1.5 h-1.5 bg-ysl-gold rounded-full animate-pulse shadow-[0_0_8px_rgba(212,175,55,0.6)]"></div>
+                    <span class="text-[9px] tracking-[0.2em] font-medium text-gray-300 uppercase">YSL LUCID: Connected &#x2022; Battery 85%</span>
+                </div>
+
+                <!-- Product Render & Header -->
+                <div class="flex items-center justify-center gap-6">
+                    <div class="relative w-16 h-28">
+                        <img id="scent-image" src="https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.56077.avif" 
+                             onerror="this.onerror=null; this.src='https://www.sephora.com/productimages/sku/s2249688-main-zoom.jpg?imwidth=500';"
+                             alt="YSL Fragrance EDP" 
+                             class="w-full h-full object-contain drop-shadow-[0_15px_20px_rgba(212,175,55,0.2)] mix-blend-lighten transition-all duration-700"
+                        >
+                    </div>
+                    <div>
+                        <h1 id="scent-title" class="font-serif text-3xl text-white tracking-wide leading-tight transition-all">Libre</h1>
+                        <p class="text-[10px] tracking-luxury text-ysl-gold uppercase mt-1">Eau de Parfum</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Content Area -->
+            <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-64 relative">
+                
+                <!-- THE SCENT TIMELINE -->
+                <div class="mt-6 mb-6 relative">
+                    <div class="flex justify-between items-end mb-4">
+                        <span class="text-[10px] tracking-luxury text-white uppercase font-medium">Scent Projection Timeline</span>
+                        <span class="text-[9px] tracking-widest text-ysl-gold border border-ysl-gold px-2 py-0.5 rounded-sm">LIVE</span>
+                    </div>
+                    
+                    <div class="w-full h-[200px] bg-ysl-card rounded-xl border border-white/10 p-4 relative shadow-lg">
+                        <canvas id="projectionChart"></canvas>
+                        
+                        <!-- Dynamic Markers -->
+                        <div id="marker-8am" class="chart-marker flex flex-col items-center opacity-0 pb-1">
+                            <div class="bg-white text-black text-[8px] font-bold tracking-wider uppercase px-2 py-1 rounded-sm shadow-lg mb-0.5 whitespace-nowrap">
+                                8:00 AM: 4 Sprays
+                            </div>
+                            <div class="w-[1px] h-6 bg-white/50 border-l border-dashed border-white/50"></div>
+                        </div>
+
+                        <div id="marker-touchup" class="chart-marker flex flex-col items-center opacity-0 pb-1">
+                            <div class="bg-ysl-gold/20 border border-ysl-gold text-ysl-gold text-[8px] font-bold tracking-wider uppercase px-2 py-1 rounded-sm shadow-lg mb-0.5 whitespace-nowrap">
+                                Touch-up Range
+                            </div>
+                            <div class="w-[1px] h-4 bg-ysl-gold/50 border-l border-dashed border-ysl-gold/50"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ENVIRONMENT -->
+                <div class="bg-ysl-card border border-white/5 rounded-lg p-4 flex items-center justify-between mb-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="text-2xl opacity-80">&#x26C5;</div>
+                        <span id="env-status-label" class="text-[10px] tracking-widest text-ysl-muted uppercase">Environment</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[14px] font-medium text-white">22°C</span>
+                        <span class="text-[10px] text-gray-400 block">45% Humidity</span>
+                    </div>
+                </div>
+
+                <!-- YOUR BEHAVIOUR INSIGHTS -->
+                <div class="bg-ysl-card border border-ysl-gold/20 rounded-xl p-5 mb-8 shadow-gold-glow relative overflow-hidden">
+                    <div class="absolute inset-0 bg-ysl-gold/5"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-[10px] tracking-luxury text-white uppercase font-bold mb-5 flex items-center gap-2">
+                            <span class="text-ysl-gold text-sm">&#x2699;</span> Your Behaviour Insights
+                        </h3>
+                        
+                        <!-- The Indoor/Outdoor Split Bar -->
+                        <div class="mb-5">
+                            <div class="flex justify-between text-[9px] uppercase tracking-widest mb-2 font-medium">
+                                <span class="text-ysl-gold flex items-center gap-1"><span class="text-xs">&#x2302;</span> Indoors <span id="behav-in-pct">85%</span></span>
+                                <span class="text-gray-500 flex items-center gap-1"><span class="text-xs">&#x26C5;</span> Outdoors <span id="behav-out-pct">15%</span></span>
+                            </div>
+                            <div class="w-full h-1.5 bg-gray-800 rounded-full flex overflow-hidden mb-3">
+                                <div id="behav-in-bar" class="h-full bg-ysl-gold shadow-[0_0_8px_#D4AF37] transition-all duration-1000" style="width: 85%"></div>
+                                <div id="behav-out-bar" class="h-full bg-gray-600 transition-all duration-1000" style="width: 15%"></div>
+                            </div>
+                            <p id="behav-remark" class="text-[10px] text-gray-300 leading-relaxed italic">
+                                "You spent 85% of the day indoors, this helps preserve your scent projection."
+                            </p>
+                        </div>
+
+                        <!-- Activity & Habit Grid -->
+                        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                            <div>
+                                <span class="text-[8px] tracking-widest text-gray-500 uppercase block mb-1">Activity Level</span>
+                                <span class="text-[11px] text-white font-medium block">Low Movement / Sedentary</span>
+                            </div>
+                            <div>
+                                <span class="text-[8px] tracking-widest text-gray-500 uppercase block mb-1">Spray Habit</span>
+                                <span class="text-[11px] text-white font-medium block">1.5x vs Avg User</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOTES BREAKDOWN -->
+                <div class="mb-8">
+                    <span class="text-[10px] tracking-luxury text-white uppercase font-medium mb-4 block">Notes Breakdown</span>
+                    
+                    <div class="flex flex-col gap-3">
+                        <!-- Top Notes -->
+                        <div class="p-3 rounded-lg border border-white/10 bg-transparent opacity-80 flex flex-col justify-center transition-all">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-serif text-[15px] text-white">Top: <span id="top-note-name" class="font-sans font-light text-sm">Lavender</span></span>
+                                <span class="text-[8px] tracking-widest text-ysl-muted uppercase border border-white/20 px-2 py-0.5 rounded-sm">Status: Dissipated</span>
+                            </div>
+                            <p id="top-note-desc" class="text-[9px] text-gray-300 font-light italic mt-1 leading-relaxed">
+                                (Evaporated ~45m post-spray due to high volatility)
+                            </p>
+                        </div>
+
+                        <!-- Heart Notes -->
+                        <div class="p-4 rounded-lg border border-ysl-gold bg-ysl-gold/10 shadow-gold-glow relative overflow-hidden transition-all">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-ysl-gold shadow-[0_0_10px_#D4AF37]"></div>
+                            <div class="flex justify-between items-start mb-1 pl-2">
+                                <span class="font-serif text-[15px] text-white">Heart: <span id="heart-note-name" class="font-sans font-light text-sm">Orange Blossom</span></span>
+                                <div class="flex items-center gap-1.5 mt-1">
+                                    <span class="w-1.5 h-1.5 bg-ysl-gold rounded-full animate-ping absolute"></span>
+                                    <span class="w-1.5 h-1.5 bg-ysl-gold rounded-full relative"></span>
+                                    <span class="text-[8px] tracking-widest text-ysl-gold uppercase font-bold">Status: Projecting</span>
+                                </div>
+                            </div>
+                            <p id="heart-note-desc" class="pl-2 text-[9px] text-gray-300 font-light italic mt-1 leading-relaxed">
+                                (Lab tests confirm active phase peaks at 2h-4h)
+                            </p>
+                        </div>
+
+                        <!-- Base Notes -->
+                        <div class="p-3 rounded-lg border border-white/10 bg-ysl-card transition-all">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-serif text-[15px] text-gray-300">Base: <span id="base-note-name" class="font-sans font-light text-sm">Musk</span></span>
+                                <span class="text-[8px] tracking-widest text-gray-400 uppercase">Status: Anchoring</span>
+                            </div>
+                            <p id="base-note-desc" class="text-[9px] text-gray-400 font-light italic mt-1 leading-relaxed">
+                                (Skin temp data confirms 8h+ skin-scent longevity)
+                            </p>
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-gray-400 font-light mt-4 text-center tracking-wide">
+                        Currently projecting Heart Notes based on wear time.
+                    </p>
+                </div>
+
+                <!-- VIAL STATUS (REFILL FEATURE) -->
+                <div class="mb-4">
+                    <span class="text-[10px] tracking-luxury text-white uppercase font-medium mb-4 block">Vial Status</span>
+                    
+                    <div class="bg-ysl-card border border-white/10 rounded-xl p-5 shadow-lg relative overflow-hidden">
+                        <!-- Warning Glow for Low Cartridge -->
+                        <div id="vial-warning-glow" class="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-3xl pointer-events-none transition-opacity duration-500 opacity-100"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex justify-between items-end mb-2">
+                                <span id="vial-title" class="font-serif text-[16px] text-white">Libre EDP <span class="font-sans font-light text-sm text-gray-400">10ml</span></span>
+                                <span id="vial-pct-text" class="text-lg font-bold text-red-400 transition-colors duration-500">12%</span>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mb-3 border border-black">
+                                <div id="vial-bar" class="h-full bg-red-400 shadow-[0_0_8px_#F87171] transition-all duration-1000" style="width: 12%"></div>
+                            </div>
+                            
+                            <p id="vial-desc" class="text-[10px] text-gray-400 leading-relaxed mb-5 transition-all">
+                                Based on your registered sprays, you have an estimated <span class="text-white font-medium">10 doses</span> remaining.
+                            </p>
+                            
+                            <!-- 1-Click Redirect Button -->
+                            <a id="refill-link" href="https://www.yslbeautyus.com/fragrance/womens-fragrances/libre/libre-eau-de-parfum/3614272648418.html" target="_blank" class="w-full flex items-center justify-center gap-2 border border-ysl-gold text-ysl-gold py-3 text-[10px] tracking-luxury uppercase font-bold hover:bg-ysl-gold hover:text-black transition-colors rounded-sm cursor-pointer">
+                                <span>Order Refill (1-Click)</span>
+                                <span class="text-sm leading-none mb-0.5">&#x2192;</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ACTION BAR (Fixed Bottom) -->
+            <div class="absolute bottom-0 w-full bg-ysl-surface border-t border-white/10 px-6 py-5 z-40">
+                <div class="flex justify-between items-center mb-3">
+                    <span id="dash-status-title" class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Status: Optimal Projection</span>
+                    <span class="text-[10px] text-ysl-muted">Last Spray: 8:00 AM (4 doses)</span>
+                </div>
+                
+                <div class="bg-ysl-card border border-white/10 rounded-md flex items-center justify-between p-3">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] tracking-widest text-gray-400 uppercase mb-0.5">Next Recommended Touch-up</span>
+                        <span id="dash-touchup-time" class="font-serif text-lg text-white transition-all">1:15 PM</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[9px] tracking-widest text-gray-500 uppercase block" id="dash-touchup-label">In</span>
+                        <span id="dash-touchup-in" class="text-sm font-bold text-white tracking-widest transition-all">0H 00M</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SCREEN 3: ALGORITHM MODAL FLOW (PRESERVE) -->
+            <!-- ========================================== -->
+            <div id="modal-preserve" class="modal-overlay absolute inset-0 bg-ysl-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
+                <div class="modal-card w-full bg-ysl-surface border border-ysl-gold/40 rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.9)] overflow-hidden relative">
+                    <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white z-10 text-xl leading-none">&times;</button>
+
+                    <!-- STEP 1: Environmental Query -->
+                    <div id="modal-step-1" class="modal-step active">
+                        <div class="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-ysl-gold/10 to-transparent flex items-center gap-3">
+                            <span class="text-ysl-gold text-lg leading-none">&#x27F3;</span>
+                            <h2 class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Micro-Climate Sync</h2>
+                        </div>
+                        <div class="p-6">
+                            <h3 class="font-serif text-[22px] text-white leading-snug mb-3">Where are you spending your day?</h3>
+                            <p class="text-[11px] text-gray-400 font-light leading-relaxed mb-6">
+                                YSL LUCID calibrates your personalized evaporation curve based on your immediate environment.
+                            </p>
+                            <div class="flex flex-col gap-3">
+                                <button onclick="processSync('indoors')" class="w-full bg-white text-black py-4 text-[11px] tracking-luxury uppercase font-medium hover:bg-gray-200 transition-colors rounded-sm shadow-lg flex items-center justify-center gap-2">
+                                    <span class="text-lg">&#x2302;</span> Indoors (Climate Controlled)
+                                </button>
+                                <button onclick="processSync('outdoors')" class="w-full bg-transparent border border-white/20 text-white py-4 text-[11px] tracking-luxury uppercase hover:border-ysl-gold hover:text-ysl-gold transition-colors rounded-sm flex items-center justify-center gap-2">
+                                    <span class="text-lg">&#x26C5;</span> Outdoors (Exposed)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Algorithm Update Result -->
+                    <div id="modal-step-2" class="modal-step">
+                        <div class="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-ysl-gold/10 to-transparent flex items-center gap-3">
+                            <span class="text-ysl-gold text-lg leading-none">&#x27F3;</span>
+                            <h2 class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Algorithm Update: Calibrated</h2>
+                        </div>
+                        <div class="p-6">
+                            <p class="font-sans text-[12px] leading-relaxed text-gray-300 font-light mb-6">
+                                Based on your recorded touch-ups and your <span id="sync-env-text" class="text-white font-medium">environment</span>, your scent dissipates <span id="sync-pct-text" class="text-white font-medium">faster</span> than the baseline. We have adjusted your curve for your active lifestyle.
+                            </p>
+                            <div class="bg-ysl-card border border-white/5 rounded-lg p-4 mb-8">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3 h-[1px] border-b border-dashed border-gray-500"></div>
+                                        <span class="text-[8px] tracking-widest text-gray-500 uppercase">Baseline Curve</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3 h-[2px] bg-ysl-gold"></div>
+                                        <span class="text-[8px] tracking-widest text-ysl-gold uppercase font-bold">Calibrated Curve</span>
+                                    </div>
+                                </div>
+                                <div class="h-24 w-full relative">
+                                    <canvas id="modalChart"></canvas>
+                                </div>
+                            </div>
+                            <button onclick="applyCalibrationAndClose()" class="w-full bg-white text-black py-4 text-[11px] tracking-luxury uppercase font-bold hover:bg-gray-200 transition-colors rounded-sm">
+                                Acknowledge & Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- SCREEN 4: SHELL SWAP MODAL (NEW DETECT FEATURE) -->
+            <!-- ========================================== -->
+            <div id="modal-shell" class="modal-overlay absolute inset-0 bg-ysl-black/80 backdrop-blur-md z-50 flex items-center justify-center p-6">
+                <div class="modal-card w-full bg-ysl-surface border border-ysl-gold/40 rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.9)] overflow-hidden relative flex flex-col max-h-[90vh]">
+                    <button onclick="closeShellModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white z-10 text-xl leading-none">&times;</button>
+                    
+                    <!-- STEP 1: Hardware Detection Alert -->
+                    <div id="shell-step-1" class="modal-step active">
+                        <div class="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-ysl-gold/10 to-transparent flex items-center gap-3">
+                            <span class="text-ysl-gold text-lg leading-none">&#x2318;</span>
+                            <h2 class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Hardware Alert</h2>
+                        </div>
+                        <div class="p-6">
+                            <h3 class="font-serif text-[22px] text-white leading-snug mb-3">Shell Removal Detected</h3>
+                            <p class="text-[11px] text-gray-400 font-light leading-relaxed mb-6">
+                                We noticed your YSL LUCID shell was disconnected. How would you like to update your scent profile?
+                            </p>
+                            <div class="flex flex-col gap-3">
+                                <button onclick="setShellAction('refill')" class="w-full bg-white text-black py-3 text-[11px] tracking-luxury uppercase font-bold hover:bg-gray-200 transition-colors rounded-sm shadow-lg">
+                                    Refilled Current Vial
+                                </button>
+                                <button onclick="setShellAction('switch')" class="w-full bg-ysl-card border border-white/20 text-white py-3 text-[11px] tracking-luxury uppercase font-bold hover:border-ysl-gold hover:text-ysl-gold transition-colors rounded-sm shadow-sm">
+                                    Switched Scent
+                                </button>
+                                <button onclick="closeShellModal()" class="w-full bg-transparent text-gray-500 py-2 text-[10px] tracking-luxury uppercase hover:text-white transition-colors mt-2">
+                                    No Change (Just Checking)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Refill Slider -->
+                    <div id="shell-step-refill" class="modal-step">
+                        <div class="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-ysl-gold/10 to-transparent flex items-center gap-3">
+                            <span class="text-ysl-gold text-lg leading-none">&#x229E;</span>
+                            <h2 class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Update Level</h2>
+                        </div>
+                        <div class="p-6 text-center">
+                            <h3 class="font-serif text-[20px] text-white leading-snug mb-6">Estimate your current fluid level:</h3>
+                            
+                            <div class="mb-8">
+                                <div class="flex justify-between items-end mb-2">
+                                    <span class="text-[10px] text-gray-400 uppercase tracking-widest">Adjust Level</span>
+                                    <span id="refill-slider-val" class="text-2xl text-ysl-gold font-serif">12%</span>
+                                </div>
+                                <input type="range" id="refill-slider" min="1" max="100" value="12" oninput="document.getElementById('refill-slider-val').innerText = this.value + '%'">
+                            </div>
+
+                            <button onclick="applyRefill(document.getElementById('refill-slider').value)" class="w-full bg-white text-black py-4 text-[11px] tracking-luxury uppercase font-bold hover:bg-gray-200 transition-colors rounded-sm">
+                                Confirm Refill
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Switch Scent -->
+                    <div id="shell-step-switch" class="modal-step">
+                        <div class="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-ysl-gold/10 to-transparent flex items-center gap-3">
+                            <span class="text-ysl-gold text-lg leading-none">&#x21C4;</span>
+                            <h2 class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Select New Scent</h2>
+                        </div>
+                        <div class="p-6 max-h-[50vh] overflow-y-auto no-scrollbar">
+                            <div id="scent-list-container" class="flex flex-col gap-3 mb-4">
+                                <!-- Dynamically populated by JS based on scentLibrary -->
+                            </div>
+                            <button id="add-new-scent-btn" onclick="openAddScentStep()" class="w-full flex items-center justify-center bg-transparent border border-white/20 border-dashed p-3 rounded hover:bg-white/5 transition-colors mt-2 shrink-0">
+                                <span class="text-[10px] text-white uppercase tracking-widest">+ Add New Scent</span>
+                            </button>
+                            <p id="scent-limit-msg" class="text-[9px] text-gray-500 text-center uppercase tracking-widest mt-4 hidden">Scent Library Full (5/5)</p>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: Add New Scent (Dynamic Entry) -->
+                    <div id="shell-step-add-scent" class="modal-step">
+                        <div class="px-6 py-5 border-b border-white/10 bg-gradient-to-r from-ysl-gold/10 to-transparent flex items-center gap-3">
+                            <span class="text-ysl-gold text-lg leading-none">&#x2295;</span>
+                            <h2 class="text-[11px] tracking-luxury text-ysl-gold uppercase font-bold">Add New Scent</h2>
+                        </div>
+                        <div class="p-6">
+                            <h3 class="font-serif text-[18px] text-white leading-snug mb-5">Select Fragrance & Volume</h3>
+                            
+                            <div class="mb-5">
+                                <label class="text-[9px] tracking-widest text-gray-400 uppercase block mb-2">YSL Fragrance Catalog</label>
+                                <div class="relative">
+                                    <select id="new-scent-select" class="w-full bg-ysl-card border border-white/20 text-white p-3 rounded text-sm focus:border-ysl-gold outline-none appearance-none cursor-pointer">
+                                        <option value="blackopium">Black Opium EDP</option>
+                                        <option value="y">Y EDP</option>
+                                        <option value="monparis">Mon Paris EDP</option>
+                                    </select>
+                                    <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400 text-xs">▼</div>
+                                </div>
+                            </div>
+
+                            <div class="mb-8">
+                                <div class="flex justify-between items-end mb-2">
+                                    <span class="text-[10px] text-gray-400 uppercase tracking-widest">Fluid Level</span>
+                                    <span id="new-scent-slider-val" class="text-2xl text-ysl-gold font-serif">100%</span>
+                                </div>
+                                <input type="range" id="new-scent-slider" min="1" max="100" value="100" oninput="document.getElementById('new-scent-slider-val').innerText = this.value + '%'">
+                            </div>
+
+                            <button onclick="confirmNewScent()" class="w-full bg-white text-black py-4 text-[11px] tracking-luxury uppercase font-bold hover:bg-gray-200 transition-colors rounded-sm">
+                                Confirm & Load Scent
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Interactive & Chart.js Logic -->
+    <script>
+        // --- GLOBAL STATE ---
+        let pendingEnvironment = 'baseline';
+        let touchUpXValue = 5.25; // X-axis value (1:15 PM)
+        let currentNowX = 5.25; // 1:15 PM represented on X axis
+        let currentScent = 'libre';
+        
+        // Scent Library State (Dynamic)
+        let scentLibrary = {
+            'libre': { name: 'Libre', subtitle: 'Eau de Parfum', pct: 12 },
+            'myslf': { name: 'MYSLF', subtitle: 'Eau de Parfum', pct: 50 }
+        };
+
+        // --- NAVIGATION LOGIC ---
+        function navTo(screenId) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-ysl-gold', 'bg-ysl-gold/10');
+                if(!btn.id.includes('shell')) btn.classList.add('text-gray-500');
+            });
+            const activeBtnId = screenId === 'screen-prompt' ? 'nav-prompt' : 'nav-predict';
+            const activeBtn = document.getElementById(activeBtnId);
+            activeBtn.classList.remove('text-gray-500');
+            activeBtn.classList.add('text-ysl-gold', 'bg-ysl-gold/10');
+
+            document.querySelectorAll('.screen-container').forEach(el => el.classList.remove('active'));
+            closeModal(); 
+            closeShellModal();
+            
+            document.getElementById(screenId).classList.add('active');
+
+            if(screenId === 'screen-predict') {
+                if(!mainChartInstance) initMainChart();
+            }
+        }
+
+        // --- PRESERVE MODAL FLOW LOGIC ---
+        function openModal() {
+            if(!document.getElementById('screen-predict').classList.contains('active')) navTo('screen-predict');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-ysl-gold', 'bg-ysl-gold/10');
+                if(!btn.id.includes('shell')) btn.classList.add('text-gray-500');
+            });
+            document.getElementById('nav-preserve').classList.add('text-ysl-gold', 'bg-ysl-gold/10');
+
+            document.getElementById('modal-step-1').classList.add('active');
+            document.getElementById('modal-step-2').classList.remove('active');
+            document.getElementById('modal-preserve').classList.add('active');
+        }
+
+        function processSync(environmentType) {
+            pendingEnvironment = environmentType;
+            document.getElementById('modal-step-1').classList.remove('active');
+            document.getElementById('modal-step-2').classList.add('active');
+
+            const envTextSpan = document.getElementById('sync-env-text');
+            const pctTextSpan = document.getElementById('sync-pct-text');
+            
+            if(environmentType === 'indoors') {
+                envTextSpan.innerText = 'frequent indoor environment';
+                pctTextSpan.innerText = 'slower';
+            } else {
+                envTextSpan.innerText = 'frequent outdoor environment';
+                pctTextSpan.innerText = '20% faster';
+            }
+            setTimeout(() => { initModalChart(environmentType); }, 100);
+        }
+
+        function closeModal() {
+            document.getElementById('modal-preserve').classList.remove('active');
+            if(document.getElementById('screen-predict').classList.contains('active')) {
+                document.getElementById('nav-predict').classList.add('text-ysl-gold', 'bg-ysl-gold/10');
+                document.getElementById('nav-preserve').classList.remove('text-ysl-gold', 'bg-ysl-gold/10');
+            }
+        }
+
+        function applyCalibrationAndClose() {
+            if(pendingEnvironment === 'outdoors') {
+                mainChartInstance.data.datasets[0].data = [100, 60, 30, 0, null, null, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, 0, 0, 0, 0, 0];
+                touchUpXValue = 3; 
+                document.getElementById('dash-status-title').innerText = "Status: Touch-up Overdue";
+                document.getElementById('dash-status-title').classList.replace('text-ysl-gold', 'text-red-400');
+                document.getElementById('dash-touchup-time').innerText = "11:00 AM";
+                document.getElementById('dash-touchup-time').classList.add('text-red-400');
+                document.getElementById('dash-touchup-label').innerText = "Overdue";
+                document.getElementById('dash-touchup-in').innerText = "2H 15M";
+                
+                document.getElementById('behav-in-pct').innerText = "15%";
+                document.getElementById('behav-out-pct').innerText = "85%";
+                document.getElementById('behav-in-bar').style.width = "15%";
+                document.getElementById('behav-out-bar').style.width = "85%";
+                document.getElementById('behav-remark').innerText = "You spent 85% of the day outdoors, wind and heat accelerate scent dissipation.";
+            } else {
+                mainChartInstance.data.datasets[0].data = [100, 85, 70, 55, 40, 25, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, null, null, 25, 10, 0];
+                touchUpXValue = 6.5; 
+                document.getElementById('dash-status-title').innerText = "Status: Optimal Projection";
+                document.getElementById('dash-status-title').classList.replace('text-red-400', 'text-ysl-gold');
+                document.getElementById('dash-touchup-time').innerText = "2:30 PM";
+                document.getElementById('dash-touchup-time').classList.remove('text-red-400');
+                document.getElementById('dash-touchup-label').innerText = "In";
+                document.getElementById('dash-touchup-in').innerText = "1H 15M";
+
+                document.getElementById('behav-in-pct').innerText = "85%";
+                document.getElementById('behav-out-pct').innerText = "15%";
+                document.getElementById('behav-in-bar').style.width = "85%";
+                document.getElementById('behav-out-bar').style.width = "15%";
+                document.getElementById('behav-remark').innerText = "You spent 85% of the day indoors, this helps preserve your scent projection.";
+            }
+            mainChartInstance.update();
+            closeModal();
+        }
+
+        // --- NEW: SHELL SWAP MODAL FLOW ---
+        function renderScentList() {
+            const container = document.getElementById('scent-list-container');
+            container.innerHTML = ''; // Clear current list
+            
+            for (const [id, data] of Object.entries(scentLibrary)) {
+                container.innerHTML += `
+                    <button onclick="applyScent('${id}')" class="w-full flex items-center justify-between bg-ysl-card border border-white/10 p-3 rounded hover:border-ysl-gold transition-colors group shrink-0">
+                        <div class="text-left">
+                            <span class="font-serif text-white block text-lg">${data.name}</span>
+                            <span class="text-[9px] text-gray-500 uppercase tracking-widest">${data.subtitle} • ${data.pct}% Left</span>
+                        </div>
+                        <span class="text-xs text-gray-600 group-hover:text-ysl-gold">&rarr;</span>
+                    </button>
+                `;
+            }
+
+            // 5 Scent Limit Logic
+            const addBtn = document.getElementById('add-new-scent-btn');
+            const limitMsg = document.getElementById('scent-limit-msg');
+            
+            if (Object.keys(scentLibrary).length >= 5) {
+                addBtn.style.display = 'none';
+                limitMsg.style.display = 'block';
+            } else {
+                addBtn.style.display = 'flex';
+                limitMsg.style.display = 'none';
+            }
+        }
+
+        function openShellSwapModal() {
+            if(!document.getElementById('screen-predict').classList.contains('active')) navTo('screen-predict');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-ysl-gold', 'bg-ysl-gold/10');
+                if(!btn.id.includes('shell')) btn.classList.add('text-gray-500');
+            });
+            document.getElementById('nav-shell').classList.remove('text-gray-500');
+            document.getElementById('nav-shell').classList.add('text-ysl-gold', 'bg-ysl-gold/10');
+
+            document.getElementById('shell-step-1').classList.add('active');
+            document.getElementById('shell-step-refill').classList.remove('active');
+            document.getElementById('shell-step-switch').classList.remove('active');
+            document.getElementById('shell-step-add-scent').classList.remove('active');
+            document.getElementById('modal-shell').classList.add('active');
+            
+            renderScentList(); // Ensure list is up to date
+        }
+
+        function closeShellModal() {
+            document.getElementById('modal-shell').classList.remove('active');
+            if(document.getElementById('screen-predict').classList.contains('active')) {
+                document.getElementById('nav-predict').classList.add('text-ysl-gold', 'bg-ysl-gold/10');
+                document.getElementById('nav-shell').classList.remove('text-ysl-gold', 'bg-ysl-gold/10');
+                document.getElementById('nav-shell').classList.add('text-gray-500');
+            }
+        }
+
+        function setShellAction(action) {
+            document.getElementById('shell-step-1').classList.remove('active');
+            if (action === 'refill') {
+                // Initialize Refill Slider to current scent percentage
+                const currentPct = scentLibrary[currentScent].pct;
+                document.getElementById('refill-slider').value = currentPct;
+                document.getElementById('refill-slider-val').innerText = currentPct + '%';
+                document.getElementById('shell-step-refill').classList.add('active');
+            } else if (action === 'switch') {
+                document.getElementById('shell-step-switch').classList.add('active');
+            }
+        }
+
+        function openAddScentStep() {
+            document.getElementById('shell-step-switch').classList.remove('active');
+            document.getElementById('shell-step-add-scent').classList.add('active');
+            // Reset Add Scent Slider
+            document.getElementById('new-scent-slider').value = 100;
+            document.getElementById('new-scent-slider-val').innerText = '100%';
+        }
+
+        function confirmNewScent() {
+            const select = document.getElementById('new-scent-select');
+            const scentId = select.value;
+            const scentName = select.options[select.selectedIndex].text.replace(' EDP', '');
+            const pct = parseInt(document.getElementById('new-scent-slider').value);
+            
+            // Add to library
+            scentLibrary[scentId] = { name: scentName, subtitle: 'Eau de Parfum', pct: pct };
+            
+            // Instantly Apply the new scent
+            applyScent(scentId);
+        }
+
+        // --- NEW: DYNAMIC VIAL UPDATES ---
+        function updateVialUI(pct, name) {
+            const pctText = document.getElementById('vial-pct-text');
+            const bar = document.getElementById('vial-bar');
+            const glow = document.getElementById('vial-warning-glow');
+            
+            pctText.innerText = pct + '%';
+            bar.style.width = pct + '%';
+            
+            if(name) {
+                document.getElementById('vial-title').innerHTML = `${name} EDP <span class="font-sans font-light text-sm text-gray-400">10ml</span>`;
+            }
+
+            const doses = Math.floor((pct / 100) * 80); // assuming 80 sprays max
+            document.getElementById('vial-desc').innerHTML = `Based on your registered sprays, you have an estimated <span class="text-white font-medium">${doses} doses</span> remaining.`;
+
+            if(pct < 20) {
+                pctText.className = 'text-lg font-bold text-red-400 transition-colors duration-500';
+                bar.className = 'h-full bg-red-400 shadow-[0_0_8px_#F87171] transition-all duration-1000';
+                glow.style.opacity = '1';
+            } else {
+                pctText.className = 'text-lg font-bold text-ysl-gold transition-colors duration-500';
+                bar.className = 'h-full bg-ysl-gold shadow-gold-glow transition-all duration-1000';
+                glow.style.opacity = '0';
+            }
+        }
+
+        function applyRefill(pct) {
+            pct = parseInt(pct);
+            scentLibrary[currentScent].pct = pct; // Update library
+            updateVialUI(pct, null); // Don't change name, just update %
+            closeShellModal();
+        }
+
+        function applyScent(scentId) {
+            currentScent = scentId;
+            const pct = scentLibrary[scentId].pct; // Get current fluid level from library
+            const refillLink = document.getElementById('refill-link');
+            let displayName = scentLibrary[scentId].name;
+            
+            if(scentId === 'myslf') {
+                document.getElementById('scent-title').innerText = displayName;
+                document.getElementById('scent-image').src = 'https://taka-prd-cdn.ascentismedia.com/ProductImages/ca045527-26e7-4cd4-9ab2-ac3ef9fe011e/1/std/ysl-myslf-250528120915.png';
+                if (refillLink) refillLink.href = 'https://www.yslbeautyus.com/fragrance/mens-fragrances/myslf/myslf-eau-de-parfum/WW-51115YSL.html';
+                
+                document.getElementById('top-note-name').innerText = 'Bergamot';
+                document.getElementById('top-note-desc').innerText = '(Luminous citrus blast, evaporates quickly ~30m)';
+                document.getElementById('heart-note-name').innerText = 'Orange Blossom';
+                document.getElementById('heart-note-desc').innerText = '(Raw, beating floral heart. Projects strongly 1h-3h)';
+                document.getElementById('base-note-name').innerText = 'Ambrofix & Patchouli';
+                document.getElementById('base-note-desc').innerText = '(Woody, ambery trail anchoring to skin for 10h+)';
+
+                mainChartInstance.data.datasets[0].data = [100, 75, 55, 35, 20, 15, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, null, null, 15, 10, 5];
+                touchUpXValue = 4.5; 
+                document.getElementById('dash-touchup-time').innerText = "12:30 PM";
+                document.getElementById('dash-touchup-label').innerText = "Overdue";
+                document.getElementById('dash-touchup-in').innerText = "45 Mins";
+                document.getElementById('dash-status-title').innerText = "Status: Transitioning to Base";
+                document.getElementById('dash-touchup-time').classList.add('text-red-400');
+                
+            } else if (scentId === 'blackopium') {
+                document.getElementById('scent-title').innerText = displayName;
+                document.getElementById('scent-image').src = 'https://www.yslbeauty.com/dw/image/v2/BDCR_PRD/on/demandware.static/-/Sites-ysl-master-catalog/default/dw31700bf0/square/Fragrance/For%20Her/Black_Opium/3365440787919_black-opium-eau-de-parfum_50ml_Alt1.png';
+                if (refillLink) refillLink.href = 'https://www.yslbeautyus.com/fragrance/womens-fragrances/black-opium/black-opium-eau-de-parfum/252YSL.html';
+                
+                document.getElementById('top-note-name').innerText = 'Pear & Pink Pepper';
+                document.getElementById('top-note-desc').innerText = '(Fruity spice flash, fades within 45m)';
+                document.getElementById('heart-note-name').innerText = 'Coffee & Jasmine';
+                document.getElementById('heart-note-desc').innerText = '(Adrenaline-rich floral core, active for 4h)';
+                document.getElementById('base-note-name').innerText = 'Vanilla & Cedarwood';
+                document.getElementById('base-note-desc').innerText = '(Warm, comforting skin-scent longevity 8h+)';
+
+                mainChartInstance.data.datasets[0].data = [100, 80, 65, 45, 25, 15, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, null, null, 15, 5, 0];
+                touchUpXValue = 5.25; 
+                document.getElementById('dash-touchup-time').innerText = "1:15 PM";
+                document.getElementById('dash-touchup-label').innerText = "In";
+                document.getElementById('dash-touchup-in').innerText = "0H 00M";
+                document.getElementById('dash-status-title').innerText = "Status: Optimal Projection";
+                document.getElementById('dash-touchup-time').classList.remove('text-red-400');
+
+            } else if (scentId === 'y') {
+                document.getElementById('scent-title').innerText = displayName;
+                document.getElementById('scent-image').src = 'https://www.myperfumeshop.com.au/cdn/shop/products/yves-saint-laurent-y-edt-for-men-perfume-for-him-935383.png?v=1611285164&width=800';
+                if (refillLink) refillLink.href = 'https://www.yslbeautyus.com/fragrance/mens-fragrances/y/y-eau-de-parfum/727YSL.html';
+                
+                document.getElementById('top-note-name').innerText = 'Apple & Ginger';
+                document.getElementById('top-note-desc').innerText = '(Crisp, biting freshness, fades quickly ~40m)';
+                document.getElementById('heart-note-name').innerText = 'Sage & Juniper';
+                document.getElementById('heart-note-desc').innerText = '(Aromatic, masculine core, projects strongly 3h)';
+                document.getElementById('base-note-name').innerText = 'Vetiver & Tonka';
+                document.getElementById('base-note-desc').innerText = '(Earthy resonance anchoring to skin 9h+)';
+
+                mainChartInstance.data.datasets[0].data = [100, 85, 60, 40, 20, 15, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, null, null, 15, 10, 0];
+                touchUpXValue = 4.75; 
+                document.getElementById('dash-touchup-time').innerText = "12:45 PM";
+                document.getElementById('dash-touchup-label').innerText = "Overdue";
+                document.getElementById('dash-touchup-in').innerText = "30 Mins";
+                document.getElementById('dash-status-title').innerText = "Status: Transitioning to Base";
+                document.getElementById('dash-touchup-time').classList.add('text-red-400');
+
+            } else if (scentId === 'monparis') {
+                document.getElementById('scent-title').innerText = displayName;
+                document.getElementById('scent-image').src = 'https://www.yslbeauty.ae/dw/image/v2/BDCL_PRD/on/demandware.static/-/Sites-ysl-master-catalog/default/dw99cc3b4c/Fragrance/For%20Her/Mo_%20Paris_Floral_WW-503304YSL/3614272491342_50ml_mon-paris-floral_Alt1.png?sw=500&sh=600';
+                if (refillLink) refillLink.href = 'https://www.yslbeautyus.com/fragrance/womens-fragrances/mon-paris/mon-paris-eau-de-parfum/4150YSL.html';
+                
+                document.getElementById('top-note-name').innerText = 'Strawberry & Raspberry';
+                document.getElementById('top-note-desc').innerText = '(Sweet, narcotic red berries, active ~1h)';
+                document.getElementById('heart-note-name').innerText = 'Datura & Peony';
+                document.getElementById('heart-note-desc').innerText = '(Hypnotic white florals, blooming for 4h)';
+                document.getElementById('base-note-name').innerText = 'Patchouli & White Musk';
+                document.getElementById('base-note-desc').innerText = '(Clean, luminous foundation lasting 8h+)';
+
+                mainChartInstance.data.datasets[0].data = [100, 85, 75, 55, 35, 15, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, null, null, 15, 5, 0];
+                touchUpXValue = 5.25; 
+                document.getElementById('dash-touchup-time').innerText = "1:15 PM";
+                document.getElementById('dash-touchup-label').innerText = "In";
+                document.getElementById('dash-touchup-in').innerText = "0H 00M";
+                document.getElementById('dash-status-title').innerText = "Status: Optimal Projection";
+                document.getElementById('dash-touchup-time').classList.remove('text-red-400');
+
+            } else if (scentId === 'libre') {
+                document.getElementById('scent-title').innerText = displayName;
+                document.getElementById('scent-image').src = 'https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.56077.avif';
+                if (refillLink) refillLink.href = 'https://www.yslbeautyus.com/fragrance/womens-fragrances/libre/libre-eau-de-parfum/3614272648418.html';
+                
+                document.getElementById('top-note-name').innerText = 'Lavender';
+                document.getElementById('top-note-desc').innerText = '(Evaporated ~45m post-spray due to high volatility)';
+                document.getElementById('heart-note-name').innerText = 'Orange Blossom';
+                document.getElementById('heart-note-desc').innerText = '(Lab tests confirm active phase peaks at 2h-4h)';
+                document.getElementById('base-note-name').innerText = 'Musk';
+                document.getElementById('base-note-desc').innerText = '(Skin temp data confirms 8h+ skin-scent longevity)';
+
+                mainChartInstance.data.datasets[0].data = [100, 85, 70, 50, 30, 15, null, null];
+                mainChartInstance.data.datasets[1].data = [null, null, null, null, null, 15, 5, 0];
+                touchUpXValue = 5.25; 
+                document.getElementById('dash-touchup-time').innerText = "1:15 PM";
+                document.getElementById('dash-touchup-label').innerText = "In";
+                document.getElementById('dash-touchup-in').innerText = "0H 00M";
+                document.getElementById('dash-status-title').innerText = "Status: Optimal Projection";
+                document.getElementById('dash-touchup-time').classList.remove('text-red-400');
+            }
+
+            mainChartInstance.update();
+            updateVialUI(pct, displayName);
+            closeShellModal();
+        }
+
+        // --- CHART.JS CONFIGURATION ---
+        function wrapLabel(label) {
+            if (typeof label !== 'string' || label.length <= 16) return label;
+            return label.split(' ');
+        }
+
+        const customTooltip = {
+            callbacks: {
+                title: function(tooltipItems) {
+                    const item = tooltipItems[0];
+                    let label = item.chart.data.labels[item.dataIndex];
+                    if (Array.isArray(label)) return label.join(' ');
+                    return label;
+                }
+            }
+        };
+
+        // 1. Dashboard Chart
+        let mainChartInstance = null;
+        function initMainChart() {
+            const ctx = document.getElementById('projectionChart').getContext('2d');
+            if(mainChartInstance) return; 
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+            gradient.addColorStop(0, 'rgba(212, 175, 55, 0.4)');
+            gradient.addColorStop(1, 'rgba(212, 175, 55, 0.0)');
+
+            const dynamicMarkerPlugin = {
+                id: 'dynamicMarker',
+                afterDraw: chart => {
+                    const {ctx, chartArea: {top, bottom}, scales: {x, y}} = chart;
+
+                    const pt8amX = x.getPixelForValue(0);
+                    const pt8amY = y.getPixelForValue(100);
+                    const marker8am = document.getElementById('marker-8am');
+                    if(marker8am) {
+                        marker8am.style.left = pt8amX + 'px';
+                        marker8am.style.top = (pt8amY + 4) + 'px';
+                        marker8am.style.opacity = 1;
+                    }
+
+                    const ptTouchX = x.getPixelForValue(touchUpXValue);
+                    const ptTouchY = y.getPixelForValue(15);
+                    const markerTouchup = document.getElementById('marker-touchup');
+                    if(markerTouchup) {
+                        markerTouchup.style.left = ptTouchX + 'px';
+                        markerTouchup.style.top = (ptTouchY + 4) + 'px';
+                        markerTouchup.style.opacity = 1;
+                    }
+
+                    const nowX = x.getPixelForValue(currentNowX);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(nowX, top);
+                    ctx.lineTo(nowX, bottom);
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.setLineDash([3, 3]);
+                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.font = '8px Montserrat';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('NOW', nowX, top - 5);
+                    ctx.restore();
+                }
+            };
+
+            mainChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM'],
+                    datasets: [{
+                        label: 'Projection Curve',
+                        data: [100, 85, 70, 50, 30, 15, null, null],
+                        borderColor: '#D4AF37',
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#000',
+                        pointBorderColor: '#D4AF37',
+                        pointBorderWidth: 2,
+                        pointRadius: 0,
+                        pointHitRadius: 10
+                    },
+                    {
+                        label: 'Predicted Fade',
+                        data: [null, null, null, null, null, 15, 5, 0],
+                        borderColor: 'rgba(212, 175, 55, 0.5)',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 40, right: 10, left: 10, bottom: 0 } },
+                    animation: { duration: 800 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        y: {
+                            min: 0, max: 120,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                            ticks: {
+                                color: '#888', font: { family: 'Montserrat', size: 9 }, stepSize: 25,
+                                callback: function(value) {
+                                    if(value === 100) return 'High';
+                                    if(value === 75) return 'Optimal';
+                                    if(value === 50) return 'Low';
+                                    if(value === 25) return 'Faded';
+                                    return '';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#666', font: { family: 'Montserrat', size: 9 }, maxTicksLimit: 8 }
+                        }
+                    }
+                },
+                plugins: [dynamicMarkerPlugin]
+            });
+        }
+
+        // 2. Modal Chart
+        let modalChartInstance = null;
+        function initModalChart(envType) {
+            const ctx = document.getElementById('modalChart').getContext('2d');
+            if(modalChartInstance) modalChartInstance.destroy();
+
+            let calibratedData = [];
+            if(envType === 'indoors') {
+                calibratedData = [100, 95, 85, 70, 50]; 
+            } else {
+                calibratedData = [100, 70, 35, 10, 0]; 
+            }
+
+            modalChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['0h', '2h', '4h', '6h', '8h'],
+                    datasets: [
+                        {
+                            label: 'Baseline Curve',
+                            data: [100, 85, 60, 40, 20],
+                            borderColor: '#666666',
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Calibrated Curve',
+                            data: calibratedData,
+                            borderColor: '#D4AF37',
+                            borderWidth: 2.5,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1500, easing: 'easeOutQuart' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        y: { display: false, min: 0, max: 100 },
+                        x: { grid: { display: false }, ticks: { color: '#666', font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        // Init App state
+        navTo('screen-prompt');
+
+    </script>
+</body>
+</html>
