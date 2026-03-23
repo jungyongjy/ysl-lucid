@@ -5,6 +5,7 @@
 
 ## 📖 Overview
 YSL Lucid is a smart 10ml fragrance shell designed to eliminate nose blindness. By utilising a predictive analytics engine that analyses real-time climate data and user spray habits, the companion app delivers perfectly timed prompts to ensure a flawless, consistent sillage without the guesswork.
+
 [![View Live Prototype](https://img.shields.io/badge/View_Live_Prototype-D4AF37?style=for-the-badge&logo=github&logoColor=black)](https://jungyongjy.github.io/ysl-lucid/)
 
 ## ⚠️ The Problem: Scent Anxiety & Nose Blindness
