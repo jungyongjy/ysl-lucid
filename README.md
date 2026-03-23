@@ -11,7 +11,7 @@ YSL Lucid is a smart 10ml fragrance shell designed to eliminate nose blindness. 
 * **The Behavioural Flaw:** Without knowing their actual projection, users are forced to guess. This leads to over-spraying (choking a room) or under-spraying (losing their signature scent).
 * **The Emotional Toll:** This guesswork breeds "Scent Anxiety", which is a loss of confidence driven by the fear of social judgement. 
 
-![Slide 1: The Invisible Crisis and Market Gap](assets/slide1.jpg)
+![Slide 1: The Invisible Crisis and Market Gap](assets/1.png)
 
 ## 💡 The Solution: Predict, Prompt, Preserve
 Lucid bridges the gap between hardware and data. It transforms existing 10ml YSL travel vials into an intelligent, data-driven ecosystem.
@@ -20,7 +20,7 @@ Lucid bridges the gap between hardware and data. It transforms existing 10ml YSL
 2. **Prompt (Predictive Analytics):** The mobile app ingests continuous time-series environmental data (temperature, humidity, indoor/outdoor micro-climates) via weather APIs to calculate a dynamic evaporation curve for the specific fragrance chemistry.
 3. **Preserve (User Action):** The user receives a precise, data-driven push notification the exact minute their projection falls below the optimal threshold. 
 
-![Slide 2: YSL Lucid App Interface and User Flow](assets/slide2.gif)
+![Slide 2: YSL Lucid App Interface and User Flow](assets/2.gif)
 
 ## ⚙️ Technical Logic & Architecture 
 *This repository contains the conceptual UI prototypes and algorithmic logic framework for the Lucid ecosystem.*
@@ -36,7 +36,7 @@ Lucid was designed not just as a tech novelty, but as a highly viable, scalable 
 * **Sustainability:** Drives a closed-loop circular economy. App prompts direct users to YSL counters for TerraCycle recycling in exchange for loyalty points.
 * **Scalability:** The $65 entry point democratises luxury, acting as a data-rich gateway for Gen-Z consumer acquisition. 
 
-![Slide 3: Feasibility, Scalability, Inclusivity, and Sustainability](assets/slide3.jpg)
+![Slide 3: Feasibility, Scalability, Inclusivity, and Sustainability](assets/3.png)
 
 ## 👥 The Team
 * **Sophia** - [Market Research, Design, Inclusivity Initiatives]
